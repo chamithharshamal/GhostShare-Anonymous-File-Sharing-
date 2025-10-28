@@ -1,0 +1,415 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { supabase, supabaseService } from '@/lib/supabaseClient'
+import { isPreviewable, generatePreviewUrl } from '@/lib/filePreview'
+import { GhostFile } from '@/lib/supabaseClient'
+
+export default function DownloadPage({ params }: { params: Promise<{ id: string }> }) {
+  const router = useRouter()
+  const [file, setFile] = useState<GhostFile | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [password, setPassword] = useState('')
+  const [showPasswordInput, setShowPasswordInput] = useState(false)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [showPreview, setShowPreview] = useState(false)
+  const [downloading, setDownloading] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+
+  useEffect(() => {
+    const fetchFile = async () => {
+      try {
+        // Get the actual params value
+        const { id } = await params
+        
+        console.log('Fetching file with ID:', id)
+        
+        // Validate UUID format
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+        if (!uuidRegex.test(id)) {
+          console.error('Invalid UUID format:', id)
+          setError('Invalid file ID format')
+          setLoading(false)
+          return
+        }
+        
+        // Check if Supabase is configured
+        if (!supabase) {
+          console.error('Supabase not configured')
+          setError('Application not properly configured. Please contact administrator.')
+          setLoading(false)
+          return
+        }
+
+        // Try to fetch file with regular client first
+        console.log('Attempting to fetch file with regular client')
+        let { data, error } = await supabase
+          .from('files')
+          .select('*')
+          .eq('id', id)
+          .single()
+
+        // If regular client fails, try with service client
+        if (error) {
+          console.log('Regular client failed:', error.message)
+          if (supabaseService) {
+            console.log('Trying with service client...')
+            const serviceResult = await supabaseService
+              .from('files')
+              .select('*')
+              .eq('id', id)
+              .single()
+            
+            if (serviceResult.data) {
+              console.log('Service client succeeded')
+              data = serviceResult.data
+              error = null
+            } else {
+              console.log('Service client also failed:', serviceResult.error?.message)
+              error = serviceResult.error
+            }
+          }
+        }
+
+        if (error) {
+          console.error('Database error:', error)
+          if (error.message.includes('PGRST205') || error.message.includes('not found')) {
+            setError('File not found or database not initialized. Please contact administrator.')
+          } else {
+            setError('File not found')
+          }
+          setLoading(false)
+          return
+        }
+        
+        if (!data) {
+          console.error('No data returned from database')
+          setError('File not found')
+          setLoading(false)
+          return
+        }
+
+        console.log('File data retrieved:', data)
+
+        // Check if file has expired
+        const now = new Date()
+        const expiresAt = new Date(data.expires_at)
+        if (now > expiresAt) {
+          setError('This file has expired')
+          setLoading(false)
+          return
+        }
+
+        // Check if file has already been sent (for one-time downloads)
+        if (data.one_time && data.sent) {
+          setError('This file has already been downloaded')
+          setLoading(false)
+          return
+        }
+
+        setFile(data)
+        
+        // Check if password is required
+        if (data.password_hash) {
+          setShowPasswordInput(true)
+        } else {
+          // Generate preview for previewable files
+          if (isPreviewable(data.mime_type)) {
+            try {
+              const url = await generatePreviewUrl(data.storage_path)
+              setPreviewUrl(url)
+            } catch (previewError) {
+              console.error('Preview generation error:', previewError)
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Fetch file error:', err)
+        setError(err instanceof Error ? err.message : 'Failed to load file')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchFile()
+  }, [])
+
+  const handleDownload = async () => {
+    setDownloading(true)
+    setError('')
+
+    try {
+      // Get the actual params value
+      const { id } = await params
+      
+      // Validate UUID format
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+      if (!uuidRegex.test(id)) {
+        throw new Error('Invalid file ID format')
+      }
+      
+      // Construct download URL with token and password if needed
+      let downloadUrl = `/api/download/${id}`
+      
+      // Add password to query params if provided
+      if (password) {
+        downloadUrl += `?password=${encodeURIComponent(password)}`
+      }
+
+      console.log('Redirecting to download URL:', downloadUrl)
+      
+      // Redirect to download API endpoint
+      window.location.href = downloadUrl
+    } catch (err) {
+      console.error('Download error:', err)
+      setError(err instanceof Error ? err.message : 'Failed to download file')
+      setDownloading(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!file) return
+    
+    if (!confirm('Are you sure you want to delete this file? This action cannot be undone.')) {
+      return
+    }
+    
+    setDeleting(true)
+    setError('')
+
+    try {
+      // Get the actual params value
+      const { id } = await params
+      
+      // Validate UUID format
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+      if (!uuidRegex.test(id)) {
+        throw new Error('Invalid file ID format')
+      }
+      
+      // Call delete API endpoint
+      const response = await fetch(`/api/delete/${id}`, {
+        method: 'DELETE',
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to delete file')
+      }
+
+      // Redirect to home page after successful deletion
+      router.push('/')
+    } catch (err) {
+      console.error('Delete error:', err)
+      setError(err instanceof Error ? err.message : 'Failed to delete file')
+      setDeleting(false)
+    }
+  }
+
+  const formatFileSize = (bytes: number): string => {
+    if (bytes < 1024) return bytes + ' bytes'
+    else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB'
+    else return (bytes / 1048576).toFixed(1) + ' MB'
+  }
+
+  const formatDate = (dateString: string): string => {
+    const date = new Date(dateString)
+    return date.toLocaleDateString() + ' at ' + date.toLocaleTimeString()
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-500 mx-auto"></div>
+          <p className="mt-4">Loading file...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
+        <div className="max-w-md mx-auto text-center p-6">
+          <div className="text-red-400 text-5xl mb-4">⚠️</div>
+          <h1 className="text-2xl font-bold mb-2">Download Error</h1>
+          <p className="text-gray-300 mb-6">{error}</p>
+          <button
+            onClick={() => router.push('/')}
+            className="bg-teal-600 hover:bg-teal-500 py-2 px-4 rounded-lg"
+          >
+            Upload Your Own File
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-900 text-white p-4 md:p-8">
+      <div className="max-w-4xl mx-auto">
+        <header className="text-center py-8">
+          <h1 className="text-3xl md:text-4xl font-bold text-teal-400">GhostShare</h1>
+          <p className="text-gray-400 mt-2">Secure, anonymous file sharing</p>
+        </header>
+
+        <main className="bg-gray-800 rounded-xl p-6 md:p-8 shadow-lg">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-bold">File Download</h2>
+            <p className="text-gray-400 mt-2">{file?.filename}</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="space-y-6">
+              <div className="bg-gray-700 rounded-lg p-4">
+                <h3 className="font-medium mb-3">File Information</h3>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">File Name:</span>
+                    <span className="truncate max-w-[50%]">{file?.filename}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">File Size:</span>
+                    <span>{file && formatFileSize(file.size)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">File Type:</span>
+                    <span>{file?.mime_type}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Expires:</span>
+                    <span>{file && formatDate(file.expires_at)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">One-time Download:</span>
+                    <span>{file?.one_time ? 'Yes' : 'No'}</span>
+                  </div>
+                </div>
+              </div>
+
+              {showPasswordInput && (
+                <div className="bg-gray-700 rounded-lg p-4">
+                  <h3 className="font-medium mb-3">Password Required</h3>
+                  <p className="text-gray-400 text-sm mb-4">
+                    This file is protected with a password. Please enter the password to download.
+                  </p>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Enter password"
+                    className="w-full bg-gray-600 border border-gray-500 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 mb-3"
+                  />
+                </div>
+              )}
+
+              {error && (
+                <div className="bg-red-900/50 border border-red-700 rounded-lg p-3 text-red-200">
+                  {error}
+                </div>
+              )}
+
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button
+                  onClick={handleDownload}
+                  disabled={downloading || (showPasswordInput && !password)}
+                  className={`flex-1 py-3 px-4 rounded-lg font-medium transition-colors ${
+                    downloading || (showPasswordInput && !password)
+                      ? 'bg-gray-700 cursor-not-allowed'
+                      : 'bg-teal-600 hover:bg-teal-500'
+                  }`}
+                >
+                  {downloading ? 'Downloading...' : 'Download File'}
+                </button>
+                <button
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className={`flex-1 py-3 px-4 rounded-lg font-medium transition-colors ${
+                    deleting
+                      ? 'bg-gray-700 cursor-not-allowed'
+                      : 'bg-red-600 hover:bg-red-500'
+                  }`}
+                >
+                  {deleting ? 'Deleting...' : 'Delete File'}
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              {previewUrl && file && (
+                <div className="bg-gray-700 rounded-lg p-4">
+                  <div className="flex justify-between items-center mb-3">
+                    <h3 className="font-medium">File Preview</h3>
+                    <button 
+                      onClick={() => setShowPreview(!showPreview)}
+                      className="text-teal-400 hover:text-teal-300 text-sm"
+                    >
+                      {showPreview ? 'Hide' : 'Show'}
+                    </button>
+                  </div>
+                  
+                  {showPreview && (
+                    <div className="mt-2 max-h-64 overflow-hidden rounded-lg">
+                      {file.mime_type.startsWith('image/') ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img 
+                          src={previewUrl} 
+                          alt="Preview" 
+                          className="max-w-full max-h-64 object-contain"
+                        />
+                      ) : file.mime_type === 'application/pdf' ? (
+                        <iframe 
+                          src={previewUrl} 
+                          className="w-full h-64"
+                          title="PDF Preview"
+                        />
+                      ) : (
+                        <div className="bg-gray-600 p-4 rounded-lg text-center">
+                          <p>Preview not available for this file type</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="bg-gray-700 rounded-lg p-4">
+                <h3 className="font-medium mb-3">Security Information</h3>
+                <ul className="text-sm space-y-2 text-gray-300">
+                  <li className="flex items-start">
+                    <span className="text-teal-400 mr-2">•</span>
+                    <span>This file is securely stored and encrypted in transit</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-teal-400 mr-2">•</span>
+                    <span>Download link expires on {file && formatDate(file.expires_at)}</span>
+                  </li>
+                  {file?.one_time && (
+                    <li className="flex items-start">
+                      <span className="text-teal-400 mr-2">•</span>
+                      <span>This file can only be downloaded once</span>
+                    </li>
+                  )}
+                  {file?.delete_after_send && (
+                    <li className="flex items-start">
+                      <span className="text-teal-400 mr-2">•</span>
+                      <span>This file will be deleted after download</span>
+                    </li>
+                  )}
+                </ul>
+              </div>
+            </div>
+          </div>
+        </main>
+
+        <footer className="text-center text-gray-500 text-sm mt-8">
+          <p>GhostShare - Secure, anonymous file sharing</p>
+        </footer>
+      </div>
+    </div>
+  )
+}
