@@ -13,6 +13,7 @@ export default function DownloadPage({ params }: { params: Promise<{ id: string 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [password, setPassword] = useState('')
+  const [passwordError, setPasswordError] = useState('') // New state for password-specific errors
   const [showPasswordInput, setShowPasswordInput] = useState(false)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [showPreview, setShowPreview] = useState(false)
@@ -179,6 +180,7 @@ Please contact the person who shared this link with you.`)
   const handleDownload = async () => {
     setDownloading(true)
     setError('')
+    setPasswordError('') // Clear password error on new attempt
 
     try {
       // Get the actual params value
@@ -199,6 +201,17 @@ Please contact the person who shared this link with you.`)
       }
 
       console.log('Redirecting to download URL:', downloadUrl)
+      
+      // First check if password is valid by making a HEAD request
+      if (password) {
+        const response = await fetch(downloadUrl, { method: 'HEAD' })
+        if (response.status === 401) {
+          // Password is invalid
+          setPasswordError('Incorrect password')
+          setDownloading(false)
+          return
+        }
+      }
       
       // Redirect to download API endpoint
       window.location.href = downloadUrl
@@ -344,10 +357,18 @@ Please contact the person who shared this link with you.`)
                   <input
                     type="password"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => {
+                      setPassword(e.target.value)
+                      if (passwordError) setPasswordError('') // Clear error when user types
+                    }}
                     placeholder="Enter password"
                     className="w-full bg-gray-600 border border-gray-500 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 mb-3"
                   />
+                  {passwordError && (
+                    <div className="text-red-400 text-sm mb-3">
+                      {passwordError}
+                    </div>
+                  )}
                 </div>
               )}
 
