@@ -11,18 +11,19 @@ interface QRCodeDisplayProps {
 
 export default function QRCodeDisplay({ 
   value, 
-  size = 200, 
+  size = 150, 
   bgColor = '#1f2937', 
   fgColor = '#ffffff' 
 }: QRCodeDisplayProps) {
   return (
-    <div className="flex justify-center p-4 bg-white rounded-lg">
+    <div className="flex justify-center p-3 bg-white rounded-lg">
       <QRCodeSVG 
         value={value} 
         size={size} 
-        bgColor={bgColor} 
-        fgColor={fgColor} 
+        bgColor={bgColor}
+        fgColor={fgColor}
         level="H"
+        includeMargin={false}
       />
     </div>
   )

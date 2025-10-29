@@ -46,8 +46,8 @@ export async function POST(request: Request) {
         storage_path: `uploads/${fileId}/${filename}`,
         created_at: createdAt.toISOString(),
         expires_at: expiresAt.toISOString(),
-        delete_after_send: deleteAfterSend,
-        one_time: oneTime,
+        delete_after_send: deleteAfterSend, // Now represents "delete after one download"
+        one_time: deleteAfterSend, // Same as delete_after_send for "delete after one download"
         sent: false,
         email,
         password_hash: passwordHash

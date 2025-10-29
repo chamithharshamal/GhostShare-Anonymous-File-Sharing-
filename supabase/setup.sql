@@ -25,20 +25,19 @@ ALTER TABLE files ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Anyone can insert files" ON files;
 DROP POLICY IF EXISTS "Anyone can select files" ON files;
 DROP POLICY IF EXISTS "Anyone can update sent status" ON files;
+DROP POLICY IF EXISTS "Allow insert for all" ON files;
+DROP POLICY IF EXISTS "Allow select for all" ON files;
+DROP POLICY IF EXISTS "Allow update for all" ON files;
 
 -- Create policies for anonymous access
-CREATE POLICY "Anyone can insert files" ON files
-FOR INSERT TO anon
-WITH CHECK (true);
+CREATE POLICY "Allow insert for all" ON files
+FOR INSERT WITH CHECK (true);
 
-CREATE POLICY "Anyone can select files" ON files
-FOR SELECT TO anon
-USING (true);
+CREATE POLICY "Allow select for all" ON files
+FOR SELECT USING (true);
 
-CREATE POLICY "Anyone can update sent status" ON files
-FOR UPDATE TO anon
-USING (true)
-WITH CHECK (true);
+CREATE POLICY "Allow update for all" ON files
+FOR UPDATE USING (true) WITH CHECK (true);
 
 -- Grant necessary permissions
 GRANT ALL ON TABLE files TO anon;

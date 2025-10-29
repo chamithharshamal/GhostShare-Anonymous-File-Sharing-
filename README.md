@@ -66,18 +66,7 @@ This will create:
    - Go to Storage > Buckets in your Supabase dashboard
    - Create a new bucket named `ghostshare`
    - Set it as private (not public)
-   - Go to the bucket's Policies tab
-   - Create the following policies for the `anon` role:
-     - **Insert policy**: Allow anonymous users to upload files
-       - Policy name: "Anyone can upload files"
-       - Operation: INSERT
-       - Roles: anon
-       - Using: (bucket_id = 'ghostshare')
-     - **Select policy**: Allow anonymous users to download files with valid tokens
-       - Policy name: "Anyone can download files with token"
-       - Operation: SELECT
-       - Roles: anon
-       - Using: (bucket_id = 'ghostshare')
+   - Follow the instructions in `supabase/STORAGE_SETUP.md` to set up the required policies
 
 4. **Verify your setup** by running the test script:
    ```bash
@@ -100,16 +89,26 @@ npm install
 npm run dev
 ```
 
-### 5. Deployment
+### 5. Vercel Deployment
+
+For detailed instructions on deploying to Vercel, please refer to the [Vercel Deployment Guide](VERCEL_DEPLOYMENT_GUIDE.md).
+
+Key points for Vercel deployment:
+
+1. **Environment Variables**: All environment variables must be set in the Vercel dashboard, not in `.env.local`
+2. **NEXT_PUBLIC_APP_URL**: Update this to your actual Vercel deployment URL
+3. **Health Check**: Use the `/api/health` endpoint to verify your deployment is working correctly
+
+### 6. Deployment
 
 Deploy to Vercel:
 
 1. Push your code to a GitHub repository
 2. Connect the repository to Vercel
-3. Set environment variables in Vercel dashboard
+3. Set all required environment variables in the Vercel dashboard (see [Vercel Deployment Guide](VERCEL_DEPLOYMENT_GUIDE.md))
 4. Deploy!
 
-### 6. Cleanup Cron Job
+### 7. Cleanup Cron Job
 
 Set up a cron job to clean up expired files daily:
 
@@ -152,6 +151,8 @@ CREATE TABLE files (
 - `POST /api/request-upload` - Request a signed upload URL
 - `POST /api/send-link` - Send download link via email
 - `GET /api/download/[id]` - Download a file (with password verification)
+- `DELETE /api/delete/[id]` - Delete a file
+- `GET /api/health` - Health check endpoint
 - `POST /api/cleanup` - Clean up expired files (cron job)
 
 ## Security Features

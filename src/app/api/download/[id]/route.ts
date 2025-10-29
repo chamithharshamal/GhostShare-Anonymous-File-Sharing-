@@ -31,17 +31,29 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     }
     
     // Get file information using service role client
-    const { data: file, error: fileError } = await supabaseService
+    const { data: files, error: fileError } = await supabaseService
       .from('files')
       .select('*')
       .eq('id', id)
-      .single()
     
-    if (fileError || !file) {
-      console.error('File not found in database:', fileError?.message || 'No file returned')
+    if (fileError) {
+      console.error('Database query error:', fileError)
+      return NextResponse.json({ error: 'Database query failed', details: fileError.message }, { status: 500 })
+    }
+    
+    // Check if file exists
+    if (!files || files.length === 0) {
+      console.error('File not found in database for ID:', id)
       return NextResponse.json({ error: 'File not found' }, { status: 404 })
     }
     
+    // Check if we got more than one file (shouldn't happen with UUIDs)
+    if (files.length > 1) {
+      console.error('Multiple files found for ID:', id)
+      return NextResponse.json({ error: 'Multiple files found' }, { status: 500 })
+    }
+    
+    const file = files[0]
     console.log('File found:', file.filename)
     
     // Check if file has expired
@@ -81,6 +93,64 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     
     // Generate signed download URL using service role client
     console.log('Generating signed URL for:', file.storage_path)
+    
+    // For delete_after_send files, we need to stream the file through our server
+    // to ensure we can delete it after download
+    if (file.delete_after_send) {
+      try {
+        // Download the file content
+        const { data: fileData, error: fileError } = await supabaseService.storage
+          .from('ghostshare')
+          .download(file.storage_path)
+        
+        if (fileError) {
+          console.error('File download error:', fileError)
+          return NextResponse.json({ error: 'Failed to download file' }, { status: 500 })
+        }
+        
+        // Convert Blob to Buffer
+        const arrayBuffer = await fileData.arrayBuffer()
+        const buffer = Buffer.from(arrayBuffer)
+        
+        // Create response with file content
+        const response = new NextResponse(buffer)
+        response.headers.set('Content-Type', file.mime_type)
+        response.headers.set('Content-Disposition', `attachment; filename="${file.filename}"`)
+        
+        // Delete file after sending response
+        try {
+          // Delete from storage using service role client
+          const { error: storageError } = await supabaseService.storage
+            .from('ghostshare')
+            .remove([file.storage_path])
+          
+          if (storageError) {
+            console.error('Storage deletion error:', storageError)
+          }
+          
+          // Delete from database using service role client
+          const { error: dbError } = await supabaseService
+            .from('files')
+            .delete()
+            .eq('id', id)
+          
+          if (dbError) {
+            console.error('Database deletion error:', dbError)
+          }
+          
+          console.log('File deleted after download')
+        } catch (deleteError) {
+          console.error('Deletion error:', deleteError)
+        }
+        
+        return response
+      } catch (streamError) {
+        console.error('Stream error:', streamError)
+        return NextResponse.json({ error: 'Failed to stream file' }, { status: 500 })
+      }
+    }
+    
+    // For regular files, use signed URL
     const { data: urlData, error: urlError } = await supabaseService.storage
       .from('ghostshare')
       .createSignedUrl(file.storage_path, 3600, { // 1 hour expiry

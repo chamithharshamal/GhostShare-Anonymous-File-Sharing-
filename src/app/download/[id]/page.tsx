@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import ConfirmModal from '@/components/ConfirmModal'
 import { supabase, supabaseService } from '@/lib/supabaseClient'
 import { isPreviewable, generatePreviewUrl } from '@/lib/filePreview'
 import { GhostFile } from '@/lib/supabaseClient'
@@ -17,6 +18,7 @@ export default function DownloadPage({ params }: { params: Promise<{ id: string 
   const [showPreview, setShowPreview] = useState(false)
   const [downloading, setDownloading] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   useEffect(() => {
     const fetchFile = async () => {
@@ -30,7 +32,7 @@ export default function DownloadPage({ params }: { params: Promise<{ id: string 
         const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
         if (!uuidRegex.test(id)) {
           console.error('Invalid UUID format:', id)
-          setError('Invalid file ID format')
+          setError('Invalid file ID format. Please check the link and try again.')
           setLoading(false)
           return
         }
@@ -49,7 +51,8 @@ export default function DownloadPage({ params }: { params: Promise<{ id: string 
           .from('files')
           .select('*')
           .eq('id', id)
-          .single()
+        
+        console.log('Query result:', { data, error })
 
         // If regular client fails, try with service client
         if (error) {
@@ -60,65 +63,102 @@ export default function DownloadPage({ params }: { params: Promise<{ id: string 
               .from('files')
               .select('*')
               .eq('id', id)
-              .single()
             
-            if (serviceResult.data) {
+            console.log('Service client result:', serviceResult)
+            
+            if (serviceResult.data && serviceResult.data.length > 0) {
               console.log('Service client succeeded')
               data = serviceResult.data
               error = null
             } else {
-              console.log('Service client also failed:', serviceResult.error?.message)
-              error = serviceResult.error
+              console.log('Service client also failed or no data found:', serviceResult.error?.message)
+              // Keep the original error from the regular client
             }
           }
+        }
+        
+        // Handle the case where we get an array but expect a single object
+        let fileData = null
+        if (data && Array.isArray(data)) {
+          if (data.length === 1) {
+            fileData = data[0]
+          } else if (data.length === 0) {
+            console.log('No file found with ID:', id)
+            setError(`File not found. This could happen if:
+1. The file was never uploaded successfully
+2. The file has expired
+3. The file was deleted
+4. The link is incorrect
+5. There's a database access policy issue
+
+Please contact the person who shared this link with you.`)
+            setLoading(false)
+            return
+          } else {
+            console.log('Multiple files found with ID:', id)
+            setError('Multiple files found with this ID (unexpected). Please contact administrator.')
+            setLoading(false)
+            return
+          }
+        } else if (data) {
+          fileData = data
         }
 
         if (error) {
           console.error('Database error:', error)
           if (error.message.includes('PGRST205') || error.message.includes('not found')) {
             setError('File not found or database not initialized. Please contact administrator.')
+          } else if (error.message.includes('row-level security')) {
+            setError('Database access policy issue. Please contact administrator.')
           } else {
-            setError('File not found')
+            setError('File not found. The file may have been deleted or expired.')
           }
           setLoading(false)
           return
         }
         
-        if (!data) {
+        if (!fileData) {
           console.error('No data returned from database')
-          setError('File not found')
+          setError(`File not found. This could happen if:
+1. The file was never uploaded successfully
+2. The file has expired
+3. The file was deleted
+4. The link is incorrect
+5. There's a database access policy issue
+
+Please contact the person who shared this link with you.`)
           setLoading(false)
           return
         }
 
-        console.log('File data retrieved:', data)
+        console.log('File data retrieved:', fileData)
 
         // Check if file has expired
         const now = new Date()
-        const expiresAt = new Date(data.expires_at)
+        const expiresAt = new Date(fileData.expires_at)
         if (now > expiresAt) {
-          setError('This file has expired')
+          setError('This file has expired and is no longer available.')
           setLoading(false)
           return
         }
 
         // Check if file has already been sent (for one-time downloads)
-        if (data.one_time && data.sent) {
-          setError('This file has already been downloaded')
+        if (fileData.one_time && fileData.sent) {
+          setError('This file has already been downloaded and is no longer available.')
           setLoading(false)
           return
         }
 
-        setFile(data)
+        setFile(fileData)
         
         // Check if password is required
-        if (data.password_hash) {
+        if (fileData.password_hash) {
           setShowPasswordInput(true)
         } else {
           // Generate preview for previewable files
-          if (isPreviewable(data.mime_type)) {
+          if (isPreviewable(fileData.mime_type)) {
             try {
-              const url = await generatePreviewUrl(data.storage_path)
+              const url = await generatePreviewUrl(fileData.storage_path)
               setPreviewUrl(url)
             } catch (previewError) {
               console.error('Preview generation error:', previewError)
@@ -127,7 +167,7 @@ export default function DownloadPage({ params }: { params: Promise<{ id: string 
         }
       } catch (err) {
         console.error('Fetch file error:', err)
-        setError(err instanceof Error ? err.message : 'Failed to load file')
+        setError(err instanceof Error ? err.message : 'Failed to load file. Please try again.')
       } finally {
         setLoading(false)
       }
@@ -172,10 +212,11 @@ export default function DownloadPage({ params }: { params: Promise<{ id: string 
   const handleDelete = async () => {
     if (!file) return
     
-    if (!confirm('Are you sure you want to delete this file? This action cannot be undone.')) {
-      return
-    }
-    
+    // Show custom confirm modal instead of browser dialog
+    setShowDeleteConfirm(true)
+  }
+  
+  const confirmDelete = async () => {
     setDeleting(true)
     setError('')
 
@@ -284,10 +325,13 @@ export default function DownloadPage({ params }: { params: Promise<{ id: string 
                     <span className="text-gray-400">Expires:</span>
                     <span>{file && formatDate(file.expires_at)}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">One-time Download:</span>
-                    <span>{file?.one_time ? 'Yes' : 'No'}</span>
-                  </div>
+                  {(file?.one_time || file?.delete_after_send) && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Delete after download:</span>
+                      <span>Yes</span>
+                    </div>
+                  )}
+
                 </div>
               </div>
 
@@ -388,13 +432,7 @@ export default function DownloadPage({ params }: { params: Promise<{ id: string 
                     <span className="text-teal-400 mr-2">•</span>
                     <span>Download link expires on {file && formatDate(file.expires_at)}</span>
                   </li>
-                  {file?.one_time && (
-                    <li className="flex items-start">
-                      <span className="text-teal-400 mr-2">•</span>
-                      <span>This file can only be downloaded once</span>
-                    </li>
-                  )}
-                  {file?.delete_after_send && (
+                  {(file?.one_time || file?.delete_after_send) && (
                     <li className="flex items-start">
                       <span className="text-teal-400 mr-2">•</span>
                       <span>This file will be deleted after download</span>
@@ -410,6 +448,16 @@ export default function DownloadPage({ params }: { params: Promise<{ id: string 
           <p>GhostShare - Secure, anonymous file sharing</p>
         </footer>
       </div>
+      
+      <ConfirmModal
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={confirmDelete}
+        title="Delete File"
+        message="Are you sure you want to delete this file? This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+      />
     </div>
   )
 }

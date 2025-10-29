@@ -47,16 +47,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Failed to generate download link' }, { status: 500 })
     }
     
-    // Update sent status using service role client
-    const { error: updateError } = await supabaseService
-      .from('files')
-      .update({ sent: true })
-      .eq('id', fileId)
-    
-    if (updateError) {
-      console.error('Update error:', updateError)
-    }
-    
     // Send email with download link
     const mailjetApiKey = process.env.MAILJET_API_KEY
     const mailjetApiSecret = process.env.MAILJET_API_SECRET
@@ -201,28 +191,6 @@ ${appUrl}`,
     } catch (emailError) {
       console.error('Email error:', emailError)
       return NextResponse.json({ error: 'Failed to send email' }, { status: 500 })
-    }
-    
-    // Delete file immediately if delete_after_send is true
-    if (file.delete_after_send) {
-      // Delete from storage using service role client
-      const { error: storageError } = await supabaseService.storage
-        .from('ghostshare')
-        .remove([file.storage_path])
-      
-      if (storageError) {
-        console.error('Storage deletion error:', storageError)
-      }
-      
-      // Delete from database using service role client
-      const { error: dbError } = await supabaseService
-        .from('files')
-        .delete()
-        .eq('id', fileId)
-      
-      if (dbError) {
-        console.error('Database deletion error:', dbError)
-      }
     }
     
     return NextResponse.json({ success: true })
