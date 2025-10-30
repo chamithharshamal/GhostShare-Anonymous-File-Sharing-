@@ -431,7 +431,7 @@ Please contact the person who shared this link with you.`)
                       : 'bg-teal-600 hover:bg-teal-500'
                   }`}
                 >
-                  {downloading ? 'Downloading...' : 'Download File'}
+                  Download File
                 </button>
                 <button
                   onClick={handleDelete}
