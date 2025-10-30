@@ -6,6 +6,7 @@ import ConfirmModal from '@/components/ConfirmModal'
 import { supabase, supabaseService } from '@/lib/supabaseClient'
 import { isPreviewable, generatePreviewUrl } from '@/lib/filePreview'
 import { GhostFile } from '@/lib/supabaseClient'
+import { EyeIcon, EyeOffIcon } from '@/components/Icons' // Import eye icons
 
 export default function DownloadPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter()
@@ -13,6 +14,7 @@ export default function DownloadPage({ params }: { params: Promise<{ id: string 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false) // State for password visibility
   const [passwordError, setPasswordError] = useState('') // New state for password-specific errors
   const [showPasswordInput, setShowPasswordInput] = useState(false)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
@@ -222,8 +224,36 @@ Please contact the person who shared this link with you.`)
     }
   }
 
+  // New function to verify password before deletion
+  const verifyPasswordForDeletion = async (fileId: string, password: string) => {
+    try {
+      // Construct download URL with token and password
+      const downloadUrl = `/api/download/${fileId}?password=${encodeURIComponent(password)}`
+      
+      // Check if password is valid by making a HEAD request
+      const response = await fetch(downloadUrl, { method: 'HEAD' })
+      return response.status !== 401; // Return true if password is correct
+    } catch (err) {
+      console.error('Password verification error:', err)
+      return false;
+    }
+  }
+
   const handleDelete = async () => {
     if (!file) return
+    
+    // If file is password protected, verify password before showing delete confirmation
+    if (file.password_hash && password) {
+      const isPasswordValid = await verifyPasswordForDeletion(file.id, password)
+      if (!isPasswordValid) {
+        setPasswordError('Incorrect password. Cannot delete file.')
+        return
+      }
+      // If password is valid, proceed to show confirmation
+    } else if (file.password_hash && !password) {
+      setPasswordError('Password is required to delete this file')
+      return
+    }
     
     // Show custom confirm modal instead of browser dialog
     setShowDeleteConfirm(true)
@@ -354,16 +384,29 @@ Please contact the person who shared this link with you.`)
                   <p className="text-gray-400 text-sm mb-4">
                     This file is protected with a password. Please enter the password to download.
                   </p>
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => {
-                      setPassword(e.target.value)
-                      if (passwordError) setPasswordError('') // Clear error when user types
-                    }}
-                    placeholder="Enter password"
-                    className="w-full bg-gray-600 border border-gray-500 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 mb-3"
-                  />
+                  <div className="relative mb-3">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => {
+                        setPassword(e.target.value)
+                        if (passwordError) setPasswordError('') // Clear error when user types
+                      }}
+                      placeholder="Enter password"
+                      className="w-full bg-gray-600 border border-gray-500 rounded-lg px-3 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-white"
+                    >
+                      {showPassword ? (
+                        <EyeOffIcon className="w-5 h-5" />
+                      ) : (
+                        <EyeIcon className="w-5 h-5" />
+                      )}
+                    </button>
+                  </div>
                   {passwordError && (
                     <div className="text-red-400 text-sm mb-3">
                       {passwordError}
