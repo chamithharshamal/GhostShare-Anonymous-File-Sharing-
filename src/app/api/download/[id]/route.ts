@@ -18,6 +18,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     const { searchParams } = new URL(request.url)
     const password = searchParams.get('password')
     
+    // Check if this is a HEAD request (password verification only)
+    const isHeadRequest = request.method === 'HEAD'
+    
     if (!id) {
       console.error('Missing file ID')
       return NextResponse.json({ error: 'Missing file ID' }, { status: 400 })
@@ -89,6 +92,14 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         console.error('Invalid password provided')
         return NextResponse.json({ error: 'Invalid password' }, { status: 401 })
       }
+      
+      // If this is just a HEAD request for password verification, return success
+      if (isHeadRequest) {
+        return new NextResponse(null, { status: 200 })
+      }
+    } else if (isHeadRequest) {
+      // If no password is required and this is a HEAD request, return success
+      return new NextResponse(null, { status: 200 })
     }
     
     // Generate signed download URL using service role client
