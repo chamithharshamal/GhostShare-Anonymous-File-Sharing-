@@ -65,7 +65,7 @@ export default function DiagnosePage() {
     <div className="min-h-screen bg-gray-900 text-white p-4 md:p-8">
       <div className="max-w-4xl mx-auto">
         <header className="text-center py-8">
-          <h1 className="text-3xl md:text-4xl font-bold text-teal-400">GhostShare Diagnostics</h1>
+          <h1 className="text-3xl md:text-4xl font-bold text-teal-400">ShadeDrop Diagnostics</h1>
           <p className="text-gray-400 mt-2">Troubleshooting download issues</p>
         </header>
 
@@ -146,7 +146,7 @@ export default function DiagnosePage() {
         </main>
 
         <footer className="text-center text-gray-500 text-sm mt-8">
-          <p>GhostShare - Secure, anonymous file sharing</p>
+          <p>ShadeDrop - Secure, anonymous file sharing</p>
         </footer>
       </div>
     </div>

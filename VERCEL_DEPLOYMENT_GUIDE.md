@@ -1,6 +1,6 @@
-# Vercel Deployment Guide for GhostShare
+# Vercel Deployment Guide for ShadeDrop
 
-This guide will help you properly configure and deploy the GhostShare application to Vercel.
+This guide will help you properly configure and deploy the ShadeDrop application to Vercel.
 
 ## Environment Variables Setup
 
@@ -22,7 +22,7 @@ When deploying to Vercel, you need to configure the environment variables in the
 ## Setting Up Environment Variables in Vercel
 
 1. Go to your Vercel dashboard
-2. Select your GhostShare project
+2. Select your ShadeDrop project
 3. Go to Settings > Environment Variables
 4. Add each of the required environment variables listed above
 
@@ -36,7 +36,7 @@ MAILJET_API_KEY=your_mailjet_api_key
 MAILJET_API_SECRET=your_mailjet_api_secret
 MAILJET_FROM_EMAIL=your_verified_email@example.com
 NEXT_PUBLIC_MAX_FILE_SIZE=104857600
-NEXT_PUBLIC_APP_URL=https://your-ghostshare-app.vercel.app
+NEXT_PUBLIC_APP_URL=https://your-shadedrop-app.vercel.app
 CRON_AUTH_TOKEN=your_secure_cron_token
 SUPABASE_ACCESS_TOKEN=your_supabase_access_token
 ```

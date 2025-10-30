@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "GhostShare - Secure Anonymous File Sharing",
-  description: "Share files securely and anonymously with GhostShare. No account required.",
+  title: "ShadeDrop - Secure Anonymous File Sharing",
+  description: "Share files securely and anonymously with ShadeDrop. No account required.",
 };
 
 export default function RootLayout({

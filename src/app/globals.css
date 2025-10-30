@@ -11,7 +11,7 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 
-/* Custom styles for GhostShare */
+/* Custom styles for ShadeDrop */
 @layer components {
   .glassmorphism {
     background: rgba(30, 41, 59, 0.7);

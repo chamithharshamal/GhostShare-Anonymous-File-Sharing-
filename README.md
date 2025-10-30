@@ -1,4 +1,4 @@
-# GhostShare
+# ShadeDrop
 
 A modern, privacy-friendly anonymous file sharing web application built with Next.js 15, Supabase, and Tailwind CSS.
 

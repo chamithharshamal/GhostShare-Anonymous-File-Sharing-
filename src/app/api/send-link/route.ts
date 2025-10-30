@@ -73,7 +73,7 @@ export async function POST(request: Request) {
         {
           From: {
             Email: fromEmail,
-            Name: 'GhostShare'
+            Name: 'ShadeDrop'
           },
           To: [
             {
@@ -81,14 +81,14 @@ export async function POST(request: Request) {
               Name: ''
             }
           ],
-          Subject: '🔗 Your GhostShare Download Link',
+          Subject: '🔗 Your ShadeDrop Download Link',
           TextPart: `Your file "${file.filename}" is ready for download!
 
 Download Link: ${frontendDownloadLink}
 
 This link expires ${expirationTime}.
 
-GhostShare – Simple, private, secure file sharing.
+ShadeDrop – Simple, private, secure file sharing.
 ${appUrl}`,
           HTMLPart: `
 <!DOCTYPE html>
@@ -96,7 +96,7 @@ ${appUrl}`,
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>GhostShare Download</title>
+  <title>ShadeDrop Download</title>
 </head>
 <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif; background-color: #0f172a; color: #f1f5f9;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0f172a;">
@@ -106,7 +106,7 @@ ${appUrl}`,
           <!-- Header -->
           <tr>
             <td align="center" style="padding: 30px 20px; background: linear-gradient(135deg, #0d9488, #0f766e);">
-              <h1 style="margin: 0; font-size: 28px; font-weight: 700; color: white;">GhostShare</h1>
+              <h1 style="margin: 0; font-size: 28px; font-weight: 700; color: white;">ShadeDrop</h1>
               <p style="margin: 8px 0 0; font-size: 16px; color: #e2e8f0;">Secure, anonymous file sharing</p>
             </td>
           </tr>
@@ -168,7 +168,7 @@ ${appUrl}`,
           <tr>
             <td align="center" style="padding: 20px; background-color: #1e293b; border-top: 1px solid #334155;">
               <p style="margin: 0; color: #94a3b8; font-size: 14px;">
-                Sent by <a href="${appUrl}" style="color: #0d9488; text-decoration: none;">GhostShare</a>
+                Sent by <a href="${appUrl}" style="color: #0d9488; text-decoration: none;">ShadeDrop</a>
               </p>
               <p style="margin: 8px 0 0; color: #64748b; font-size: 12px;">
                 Secure, anonymous file sharing

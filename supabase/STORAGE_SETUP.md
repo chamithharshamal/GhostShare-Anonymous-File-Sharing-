@@ -1,6 +1,6 @@
 # Supabase Storage Setup Guide
 
-This guide will help you set up the storage bucket and policies for GhostShare manually through the Supabase dashboard.
+This guide will help you set up the storage bucket and policies for ShadeDrop manually through the Supabase dashboard.
 
 ## Step 1: Create the Storage Bucket
 
@@ -58,4 +58,4 @@ If you encounter issues:
 3. **Verify the policy conditions** - the `bucket_id = 'ghostshare'` condition is critical
 4. **Make sure you're using the service role key** in your backend API routes for elevated permissions
 
-Your GhostShare application should now be able to upload and download files properly!
+Your ShadeDrop application should now be able to upload and download files properly!

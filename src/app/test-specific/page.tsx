@@ -169,7 +169,7 @@ export default function TestSpecificPage() {
         </main>
 
         <footer className="text-center text-gray-500 text-sm mt-8">
-          <p>GhostShare - Secure, anonymous file sharing</p>
+          <p>ShadeDrop - Secure, anonymous file sharing</p>
         </footer>
       </div>
     </div>

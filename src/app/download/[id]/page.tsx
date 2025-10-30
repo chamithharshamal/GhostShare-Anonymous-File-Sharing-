@@ -6,7 +6,8 @@ import ConfirmModal from '@/components/ConfirmModal'
 import { supabase, supabaseService } from '@/lib/supabaseClient'
 import { isPreviewable, generatePreviewUrl } from '@/lib/filePreview'
 import { GhostFile } from '@/lib/supabaseClient'
-import { EyeIcon, EyeOffIcon } from '@/components/Icons' // Import eye icons
+import { EyeIcon, EyeOffIcon } from '@/components/Icons'
+
 
 export default function DownloadPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter()
@@ -337,7 +338,41 @@ Please contact the person who shared this link with you.`)
     <div className="min-h-screen bg-gray-900 text-white p-4 md:p-8">
       <div className="max-w-4xl mx-auto">
         <header className="text-center py-8">
-          <h1 className="text-3xl md:text-4xl font-bold text-teal-400">GhostShare</h1>
+          <div className="flex items-center justify-center mb-4">
+            <svg 
+              className="w-10 h-10 text-teal-400 mr-3" 
+              viewBox="0 0 24 24" 
+              fill="none" 
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path 
+                d="M12 2C8.5 2 6 4.5 6 8C6 11.5 8.5 13 8.5 13C8.5 13 6 14.5 6 18C6 21.5 8.5 23 12 23C15.5 23 18 21.5 18 18C18 14.5 15.5 13 15.5 13C15.5 13 18 11.5 18 8C18 4.5 15.5 2 12 2Z" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                strokeLinecap="round" 
+                strokeLinejoin="round"
+              />
+              <path 
+                d="M12 8C13.1046 8 14 7.10457 14 6C14 4.89543 13.1046 4 12 4C10.8954 4 10 4.89543 10 6C10 7.10457 10.8954 8 12 8Z" 
+                fill="currentColor"
+              />
+              <path 
+                d="M9 12H9.01" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                strokeLinecap="round" 
+                strokeLinejoin="round"
+              />
+              <path 
+                d="M15 12H15.01" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                strokeLinecap="round" 
+                strokeLinejoin="round"
+              />
+            </svg>
+            <h1 className="text-3xl md:text-4xl font-bold text-teal-400">ShadeDrop</h1>
+          </div>
           <p className="text-gray-400 mt-2">Secure, anonymous file sharing</p>
         </header>
 
@@ -431,7 +466,7 @@ Please contact the person who shared this link with you.`)
                       : 'bg-teal-600 hover:bg-teal-500'
                   }`}
                 >
-                  {downloading ? 'Downloading...' : 'Download File'}
+                  Download File
                 </button>
                 <button
                   onClick={handleDelete}
@@ -442,7 +477,7 @@ Please contact the person who shared this link with you.`)
                       : 'bg-red-600 hover:bg-red-500'
                   }`}
                 >
-                  {deleting ? 'Deleting...' : 'Delete File'}
+                  Delete File
                 </button>
               </div>
             </div>
@@ -509,7 +544,7 @@ Please contact the person who shared this link with you.`)
         </main>
 
         <footer className="text-center text-gray-500 text-sm mt-8">
-          <p>GhostShare - Secure, anonymous file sharing</p>
+          <p>ShadeDrop - Secure, anonymous file sharing</p>
         </footer>
       </div>
       

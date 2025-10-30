@@ -286,7 +286,7 @@ export default function Home() {
                 strokeLinejoin="round"
               />
             </svg>
-            <h1 className="text-3xl md:text-4xl font-bold text-teal-400">GhostShare</h1>
+            <h1 className="text-3xl md:text-4xl font-bold text-teal-400">ShadeDrop</h1>
           </div>
           <p className="text-gray-400 mt-2">Secure, anonymous file sharing</p>
         </header>
@@ -463,7 +463,7 @@ export default function Home() {
         </main>
 
         <footer className="text-center text-gray-500 text-sm mt-8">
-          <p>© 2025 GhostShare. All files are encrypted and automatically deleted.</p>
+          <p>© 2025 ShadeDrop. All files are encrypted and automatically deleted.</p>
         </footer>
       </div>
     </div>
